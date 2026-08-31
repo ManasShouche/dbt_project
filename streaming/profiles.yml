@@ -3,7 +3,7 @@ tpch_stream:
   outputs:
 
     dev:
-      account:          EPOYKUR-NM07280
+      account:          ${SNOWFLAKE_ACCOUNT}
       user:             kafka_ingest_svc
       role:             kafka_ingest
       database:         DBT_PIPE
@@ -13,7 +13,7 @@ tpch_stream:
       private_key_path: ./secrets/kafka_ingest_key.p8
 
     prod:
-      account:          EPOYKUR-NM07280
+      account:          ${SNOWFLAKE_ACCOUNT}
       user:             kafka_ingest_svc
       role:             kafka_ingest
       database:         DBT_PIPE

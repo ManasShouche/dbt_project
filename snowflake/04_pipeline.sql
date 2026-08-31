@@ -2,6 +2,8 @@ USE ROLE ACCOUNTADMIN;
 
 ALTER ACCOUNT SET DEFAULT_DBT_VERSION = '1.11.11';
 
+DROP TASK IF EXISTS dbt_pipe.control.run_dbt;
+
 CREATE TABLE IF NOT EXISTS dbt_pipe.control.ingest_log (
     stream_name  STRING,
     rows_arrived NUMBER,
@@ -24,11 +26,15 @@ CREATE OR REPLACE TASK dbt_pipe.control.t_detect_arrivals
       OR SYSTEM$STREAM_HAS_DATA('dbt_pipe.raw_streams.payments_arrivals')
 AS
     INSERT INTO dbt_pipe.control.ingest_log (stream_name, rows_arrived, detected_at)
-    SELECT 'orders',   COUNT(*), CURRENT_TIMESTAMP()
-    FROM dbt_pipe.raw_streams.orders_arrivals
-    UNION ALL
-    SELECT 'payments', COUNT(*), CURRENT_TIMESTAMP()
-    FROM dbt_pipe.raw_streams.payments_arrivals;
+    SELECT stream_name, rows_arrived, CURRENT_TIMESTAMP()
+    FROM (
+        SELECT 'orders' AS stream_name, COUNT(*) AS rows_arrived
+        FROM dbt_pipe.raw_streams.orders_arrivals
+        UNION ALL
+        SELECT 'payments', COUNT(*)
+        FROM dbt_pipe.raw_streams.payments_arrivals
+    )
+    WHERE rows_arrived > 0;
 
 CREATE OR REPLACE TASK dbt_pipe.control.t_run_dbt
     WAREHOUSE = wh_transform
@@ -37,16 +43,10 @@ AS
     EXECUTE DBT PROJECT dbt_pipe.control.tpch_clean
         ARGS = 'build --target dev';
 
-ALTER TASK dbt_pipe.control.t_run_dbt RESUME;
+ALTER TASK dbt_pipe.control.t_run_dbt        RESUME;
+ALTER TASK dbt_pipe.control.t_detect_arrivals RESUME;
 
 SHOW TASKS IN SCHEMA dbt_pipe.control;
 
-SELECT "name", "state", "schedule", "condition", "predecessors"
+SELECT "name", "state", "schedule", "predecessors"
 FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
-
-SELECT * FROM dbt_pipe.control.ingest_log ORDER BY detected_at DESC LIMIT 20;
-
-SELECT name, state, scheduled_time, completed_time, error_message
-FROM TABLE(dbt_pipe.information_schema.task_history())
-ORDER BY scheduled_time DESC
-LIMIT 20;

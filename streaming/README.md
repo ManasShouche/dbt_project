@@ -11,7 +11,7 @@ The landing table is declared as a dbt source in `models/_sources.yml`, and
 | `connect/Dockerfile` | Connect base image + the Snowflake connector JAR |
 | `profiles.yml` | Named connection profiles, dbt-shaped |
 | `connectors/` | Connector config template (rendered from the profile) |
-| `../snowflake/` | The SQL, in run order. `01_ingest_setup` and `02_ingest_verify` are this stack's half |
+| `../snowflake/` | The SQL, in run order. `01_platform` and `05_verify` are this stack's half |
 | `scripts/` | Keypair generation, connector deploy, test producer |
 
 Data lands in **`DBT_PIPE.RAW`** as a Snowflake-managed Apache Iceberg table
@@ -49,7 +49,7 @@ connector. Console is at http://localhost:8080.
 ./scripts/produce_orders.sh 500
 ```
 
-**5. Verify** with `../snowflake/02_verify.sql`. Rows should appear within
+**5. Verify** with `../snowflake/05_verify.sql`. Rows should appear within
 seconds.
 
 ## Notes
@@ -101,7 +101,7 @@ seconds.
   scale, so the inference has something to work from.
 - **Exactly-once** is inherent to the streaming path — each Kafka partition
   maps 1:1 to a Snowflake channel, and the offset token commits atomically
-  with the rows. Query 3 in `02_verify.sql` is what proves it held.
+  with the rows. Query 3 in `05_verify.sql` is what proves it held.
 - **Targeting Iceberg** is `snowflake.autocreate.table.type` (`snowflake` |
   `iceberg`) plus `snowflake.iceberg.create.table.options` in v4, not the
   older `snowflake.streaming.iceberg.enabled` flag.
@@ -158,7 +158,7 @@ tpch_stream:
   target: dev
   outputs:
     dev:
-      account: EPOYKUR-NM07280
+      account: ${SNOWFLAKE_ACCOUNT}
       user: kafka_ingest_svc
       role: kafka_ingest
       database: DBT_PIPE

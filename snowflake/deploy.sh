@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+if [[ ! -f snowflake/.env ]]; then
+  echo "snowflake/.env missing. cp snowflake/.env.example snowflake/.env" >&2
+  exit 1
+fi
+set -a; source snowflake/.env; set +a
+
+CONN="${SNOWFLAKE_CONNECTION:-tpch}"
+PROJECT="dbt_pipe.control.tpch_clean"
+DBT_VERSION="1.11.11"
+RESET=0
+VERIFY=0
+for arg in "$@"; do
+  case "$arg" in
+    --reset)  RESET=1 ;;
+    --verify) VERIFY=1 ;;
+    *) echo "usage: snowflake/deploy.sh [--reset] [--verify]" >&2; exit 2 ;;
+  esac
+done
+
+run() {
+  echo
+  echo "=== $1"
+  snow sql -c "$CONN" -f "$1" \
+    -D "s3_base_url=$S3_BASE_URL" \
+    -D "aws_role_arn=$AWS_ROLE_ARN" \
+    -D "aws_external_id=$AWS_EXTERNAL_ID"
+}
+
+if (( RESET )); then
+  run snowflake/99_reset.sql
+fi
+
+run snowflake/01_platform.sql
+for f in snowflake/02_landing/[!_]*.sql; do run "$f"; done
+run snowflake/03_dimensions.sql
+
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
+for p in dbt_project.yml dbt_projects_profiles.yml models macros seeds snapshots tests; do
+  cp -R "$p" "$STAGE/"
+done
+
+echo
+echo "=== deploy dbt project $PROJECT"
+snow dbt deploy "$PROJECT" -c "$CONN" \
+  --source "$STAGE" \
+  --default-target dev \
+  --dbt-version "$DBT_VERSION"
+
+run snowflake/04_pipeline.sql
+
+if (( VERIFY )); then
+  run snowflake/05_verify.sql
+fi

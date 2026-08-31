@@ -31,7 +31,7 @@ to `CUSTOMER_RAW`, `NATION_RAW` and `REGION_RAW` as well.
 
 ## 1. Land it
 
-Copy [`snowflake/landing/_template.sql`](../snowflake/landing/_template.sql),
+Copy [`snowflake/02_landing/_template.sql`](../snowflake/02_landing/_template.sql),
 replace `<STREAM>`, fill in the payload shape, run as `ACCOUNTADMIN`. No
 grants needed — step 0 covered them.
 
@@ -127,6 +127,24 @@ Add one `-- depends_on:` line for the new silver model to
 appears in monitoring.
 
 Then `dbt build`.
+
+## 4. Wire it into the trigger
+
+The build is event-driven, so a new landing table needs an arrival stream and
+a place in the root task's condition. Both live in
+[`snowflake/04_pipeline.sql`](../snowflake/04_pipeline.sql):
+
+```sql
+CREATE STREAM IF NOT EXISTS dbt_pipe.raw_streams.users_arrivals
+    ON TABLE dbt_pipe.raw_streams.users_stream
+    SHOW_INITIAL_ROWS = FALSE;
+```
+
+Add `OR SYSTEM$STREAM_HAS_DATA('dbt_pipe.raw_streams.users_arrivals')` to the
+`WHEN` clause, and a `SELECT 'users', COUNT(*) FROM ...users_arrivals` branch
+to the task body. That second edit is not optional: a stream only advances
+when a DML statement consumes it, and an arrival stream nothing consumes will
+hold the condition true forever and keep the warehouse awake.
 
 ---
 

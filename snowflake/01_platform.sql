@@ -34,9 +34,9 @@ CREATE EXTERNAL VOLUME IF NOT EXISTS ev_iceberg
         (
             NAME = 'iceberg-primary'
             STORAGE_PROVIDER = 'S3'
-            STORAGE_BASE_URL = 's3://snowflake-dbt-2233/iceberg/'
-            STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::596234624522:role/snowflake_pipeline_role'
-            STORAGE_AWS_EXTERNAL_ID = 'sf_iceberg_ext_id'
+            STORAGE_BASE_URL = '<% s3_base_url %>'
+            STORAGE_AWS_ROLE_ARN = '<% aws_role_arn %>'
+            STORAGE_AWS_EXTERNAL_ID = '<% aws_external_id %>'
         )
     )
     ALLOW_WRITES = TRUE

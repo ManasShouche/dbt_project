@@ -8,6 +8,7 @@
 import argparse
 import os
 import pathlib
+import re
 import sys
 
 try:
@@ -60,6 +61,29 @@ def main() -> None:
         )
 
     out = outputs[target]
+
+    def expand(value):
+        if not isinstance(value, str):
+            return value
+        missing = []
+
+        def sub(m):
+            v = os.environ.get(m.group(1))
+            if v is None:
+                missing.append(m.group(1))
+                return m.group(0)
+            return v
+
+        result = re.sub(r"\$\{(\w+)\}", sub, value)
+        if missing:
+            sys.exit(
+                f"Unset environment variable(s) referenced by {path}: "
+                + ", ".join(sorted(set(missing)))
+                + "\nSet them in streaming/.env (see .env.example)."
+            )
+        return result
+
+    out = {k: expand(v) for k, v in out.items()}
 
     if "type" in out and out["type"] != "snowflake":
         sys.exit(f"Target '{target}' has type '{out['type']}'; the Snowflake sink needs snowflake.")
