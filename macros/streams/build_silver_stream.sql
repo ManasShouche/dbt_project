@@ -1,7 +1,6 @@
 {% macro build_silver_stream(stream_name) %}
 
-{%- if not execute -%}
-
+{%- if not execute or stream_config_optional() -%}
 select 1 as parse_time_placeholder
 {%- else -%}
 

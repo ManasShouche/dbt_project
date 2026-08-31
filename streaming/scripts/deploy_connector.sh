@@ -7,8 +7,15 @@ cd "$ROOT"
 
 if [[ -f .env ]]; then set -a; source .env; set +a; fi
 
-PY="$ROOT/../.venv/bin/python"
-[[ -x "$PY" ]] || PY="$(command -v python3)"
+PY=""
+for candidate in "$ROOT/../.venv/bin/python" "${VIRTUAL_ENV:-}/bin/python" "$(command -v python3 || true)"; do
+  [[ -x "$candidate" ]] || continue
+  if "$candidate" -c 'import yaml' 2>/dev/null; then PY="$candidate"; break; fi
+done
+if [[ -z "$PY" ]]; then
+  echo "No python with PyYAML found. Run 'uv sync' in the repo root first." >&2
+  exit 1
+fi
 
 eval "$("$PY" scripts/resolve_profile.py "$@" | sed 's/^/export /')"
 

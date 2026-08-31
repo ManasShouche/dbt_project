@@ -33,6 +33,12 @@ dbt project into a temp directory before `snow dbt deploy`, because `--source`
 uploads every file it finds and the working tree holds `streaming/secrets/`
 and a `.venv`.
 
+`03_dimensions.sql` is retried up to three times. Large writes to an Iceberg
+table intermittently abort with Snowflake internal error 300010, which logs a
+support incident and then succeeds unchanged on the next attempt — observed
+four times in eight runs of the same 150,000-row load. Nothing in the
+statement is wrong, so the deploy retries rather than failing.
+
 Order is load-bearing. `01_platform.sql` must run before anything in
 `02_landing/`: a future grant applies only to objects created after it, so a
 landing table created first comes back with no grants and the connector fails

@@ -32,13 +32,26 @@ run() {
     -D "aws_external_id=$AWS_EXTERNAL_ID"
 }
 
+run_with_retry() {
+  local attempt=1
+  until run "$1"; do
+    if (( attempt >= 3 )); then
+      echo "$1 failed $attempt times, giving up." >&2
+      return 1
+    fi
+    echo "$1 failed (attempt $attempt), retrying..." >&2
+    attempt=$(( attempt + 1 ))
+    sleep 5
+  done
+}
+
 if (( RESET )); then
   run snowflake/99_reset.sql
 fi
 
 run snowflake/01_platform.sql
 for f in snowflake/02_landing/[!_]*.sql; do run "$f"; done
-run snowflake/03_dimensions.sql
+run_with_retry snowflake/03_dimensions.sql
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

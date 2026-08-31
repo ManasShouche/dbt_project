@@ -1,6 +1,7 @@
 {{ config(materialized = 'view') }}
 
 -- depends_on: {{ ref('stream_config') }}
+-- depends_on: {{ ref('stream_column_config') }}
 -- depends_on: {{ ref('silver_orders') }}
 -- depends_on: {{ ref('silver_payments') }}
 

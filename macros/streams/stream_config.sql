@@ -1,3 +1,20 @@
+{% macro stream_config_available() %}
+    {%- if not execute -%}{{ return(false) }}{%- endif -%}
+    {%- set cfg  = ref('stream_config') -%}
+    {%- set cols = ref('stream_column_config') -%}
+    {%- set have_cfg = adapter.get_relation(
+            database=cfg.database, schema=cfg.schema, identifier=cfg.identifier) is not none -%}
+    {%- set have_cols = adapter.get_relation(
+            database=cols.database, schema=cols.schema, identifier=cols.identifier) is not none -%}
+    {{ return(have_cfg and have_cols) }}
+{% endmacro %}
+
+
+{% macro stream_config_optional() %}
+    {{ return(flags.WHICH in ['compile', 'parse'] and not stream_config_available()) }}
+{% endmacro %}
+
+
 {% macro _rows_as_dicts(results) %}
     {%- set out = [] -%}
     {%- set names = results.column_names | map('lower') | list -%}
@@ -56,7 +73,7 @@
 {% endmacro %}
 
 {% macro get_enabled_streams() %}
-    {%- if not execute -%}{{ return([]) }}{%- endif -%}
+    {%- if not execute or stream_config_optional() -%}{{ return([]) }}{%- endif -%}
 
     {%- set sql -%}
         select stream_name, source_topic, raw_table, target_model,
