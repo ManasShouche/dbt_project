@@ -13,4 +13,8 @@ CREATE GIT REPOSITORY IF NOT EXISTS dbt_pipe.workspace.tpch_repo
 
 ALTER GIT REPOSITORY dbt_pipe.workspace.tpch_repo FETCH;
 
+CREATE WORKSPACE IF NOT EXISTS dbt_pipe.workspace.tpch_ws;
+
+SHOW WORKSPACES IN SCHEMA dbt_pipe.workspace;
+
 LS @dbt_pipe.workspace.tpch_repo/branches/main/snowflake/;
