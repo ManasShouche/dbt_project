@@ -27,9 +27,9 @@ run() {
   echo
   echo "=== $1"
   snow sql -c "$CONN" -f "$1" \
-    -D "s3_base_url=$S3_BASE_URL" \
-    -D "aws_role_arn=$AWS_ROLE_ARN" \
-    -D "aws_external_id=$AWS_EXTERNAL_ID"
+    -D "s3_base_url='$S3_BASE_URL'" \
+    -D "aws_role_arn='$AWS_ROLE_ARN'" \
+    -D "aws_external_id='$AWS_EXTERNAL_ID'"
 }
 
 run_with_retry() {
