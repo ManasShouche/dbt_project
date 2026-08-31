@@ -4,9 +4,6 @@
     )
 }}
 
--- DOWNSTREAM: dim_customers declares the real lag and this follows it, so
--- freshness is set in one place for the whole chain.
-
 with source as (
 
     select * from {{ source('raw', 'customer_raw') }}
@@ -28,8 +25,6 @@ renamed as (
 
     from source
 
-    -- Loaded in full each time rather than batched, so a reload would
-    -- duplicate every customer without this.
     qualify row_number() over (
         partition by c_custkey
         order by _loaded_at desc

@@ -1,6 +1,3 @@
--- Health checks. Read-only. Run as TRANSFORMER; last query needs ACCOUNTADMIN.
--- Queries 4-6 need streamed records to exist first.
-
 USE ROLE transformer;
 USE WAREHOUSE wh_transform;
 USE SCHEMA dbt_pipe.raw_streams;

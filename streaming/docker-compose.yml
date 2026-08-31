@@ -1,8 +1,3 @@
-# Redpanda (Kafka API) + Kafka Connect running the Snowflake sink.
-#
-# Redpanda is a single binary with no ZooKeeper/KRaft controller to babysit.
-# The wire protocol is the same, so the connector cannot tell the difference.
-
 services:
   redpanda:
     image: redpandadata/redpanda:latest
@@ -15,10 +10,7 @@ services:
       - --overprovisioned
       - --node-id=0
       - --check=false
-      # Two listeners: `internal` is what Connect and Console use inside the
-      # compose network, `external` is what rpk/your laptop use from the host.
-      # Advertising only one address is the most common reason a local Kafka
-      # "connects" but never delivers.
+
       - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
       - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
       - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
@@ -26,8 +18,8 @@ services:
       - --advertise-rpc-addr=redpanda:33145
       - --mode=dev-container
     ports:
-      - "19092:19092"   # broker, from the host
-      - "18081:18081"   # schema registry, from the host
+      - "19092:19092"
+      - "18081:18081"
     volumes:
       - redpanda-data:/var/lib/redpanda/data
     healthcheck:
@@ -65,8 +57,6 @@ services:
       CONNECT_REST_PORT: "8083"
       CONNECT_GROUP_ID: snowpipe-connect
 
-      # Connect stores its own state in Kafka topics. RF=1 because this is a
-      # single broker; anything higher and the worker refuses to start.
       CONNECT_CONFIG_STORAGE_TOPIC: _connect_configs
       CONNECT_OFFSET_STORAGE_TOPIC: _connect_offsets
       CONNECT_STATUS_STORAGE_TOPIC: _connect_status
@@ -80,15 +70,12 @@ services:
 
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
 
-      # Resolves ${file:/path:key} references at task startup, so the private
-      # key never enters the connector config and therefore never lands in
-      # the _connect_configs topic or comes back out of the REST API.
       CONNECT_CONFIG_PROVIDERS: file
       CONNECT_CONFIG_PROVIDERS_FILE_CLASS: org.apache.kafka.common.config.provider.FileConfigProvider
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
       CONNECT_LOG4J_LOGGERS: com.snowflake.kafka.connector=INFO
     volumes:
-      # Read-only: the worker resolves the key from here, nothing writes back.
+
       - ./secrets:/secrets:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors || exit 1"]

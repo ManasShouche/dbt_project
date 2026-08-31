@@ -1,20 +1,12 @@
 #!/usr/bin/env bash
-# Resolve a named profile/target, render the connector config, and POST it
-# to the Connect worker. Re-running updates the connector in place.
-#
-#   ./scripts/deploy_connector.sh
-#   ./scripts/deploy_connector.sh --target prod
-#   ./scripts/deploy_connector.sh --profile tpch_stream --target dev
-#   CONNECTOR_PROFILES_PATH=~/.dbt/profiles.yml ./scripts/deploy_connector.sh --profile tpch_pipeline
+
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# Optional: holds the profile/target selector and CONNECT_URL only.
 if [[ -f .env ]]; then set -a; source .env; set +a; fi
 
-# PyYAML ships with dbt, so the project venv already has it.
 PY="$ROOT/../.venv/bin/python"
 [[ -x "$PY" ]] || PY="$(command -v python3)"
 
@@ -31,10 +23,6 @@ if grep -qi ENCRYPTED "$SNOWFLAKE_PRIVATE_KEY_PATH"; then
   exit 1
 fi
 
-# Write the key into the properties file the worker's FileConfigProvider
-# reads. This keeps it OUT of the connector config: Connect persists configs
-# to the _connect_configs topic and echoes them back over the REST API, so an
-# inlined key would sit in plaintext in both.
 mkdir -p secrets && chmod 700 secrets
 KEY_PROPS="secrets/snowflake.properties"
 umask 077
@@ -45,16 +33,9 @@ umask 077
 } > "$KEY_PROPS"
 echo "Wrote $KEY_PROPS (mounted read-only into the connect container)."
 
-# Which topics this ONE connector subscribes to, and where each lands. Both
-# lists must agree: a topic with no mapping does not error, the connector
-# derives a table name from the topic and lands rows nobody is reading.
-#
-# Adding a stream is an edit here (or in .env), not a second connector.
 export KAFKA_TOPICS="${KAFKA_TOPICS:-orders,payments}"
 export KAFKA_TOPIC_TABLE_MAP="${KAFKA_TOPIC_TABLE_MAP:-orders:ORDERS_STREAM,payments:PAYMENTS_STREAM}"
 
-# One dead-letter topic for every stream: per-topic DLQs multiply the things
-# you have to remember to watch.
 export KAFKA_DLQ_TOPIC="${KAFKA_DLQ_TOPIC:-dlq.streams}"
 
 CONNECT_URL="${CONNECT_URL:-http://localhost:8083}"
@@ -72,8 +53,7 @@ def sub(m):
         missing.append(k)
         return m.group(0)
     return v.replace('\\', '\\\\').replace('"', '\\"')
-# \w+ only, so Connect's own ${file:/path:key} references -- which contain
-# ':' and '/' -- are left untouched for the worker to resolve.
+
 out = re.sub(r'\$\{(\w+)\}', sub, tpl)
 if missing:
     sys.exit("Unset variables: " + ", ".join(sorted(set(missing))))

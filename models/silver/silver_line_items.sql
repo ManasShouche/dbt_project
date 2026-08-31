@@ -6,18 +6,6 @@
     )
 }}
 
--- Silver: explode the nested line_items array into one row per line.
---
--- delete+insert, not merge, and unique_key is order_key alone even though
--- the grain is (order_key, line_number). A re-delivered order can carry
--- FEWER lines than the stored copy; merge only inserts and updates, so the
--- dropped lines would survive as orphans and overstate every downstream
--- revenue total. The unit of replacement is the order, which is the unit
--- the payload delivers.
---
--- Same watermark and lookback as silver_orders, so an order's header and
--- its lines come from the same delivery.
-
 with bronze as (
 
     select * from {{ ref('bronze_orders') }}
@@ -33,8 +21,6 @@ with bronze as (
 
 latest_delivery as (
 
-    -- Collapse duplicate deliveries BEFORE exploding; the other order
-    -- multiplies every duplicate across all of its lines.
     select * from bronze
     qualify row_number() over (
         partition by record_content:order_key::number
@@ -49,8 +35,6 @@ exploded as (
     select
         latest_delivery.record_content:order_key::number as order_key,
 
-        -- On a structured ARRAY, `value` stays typed rather than degrading
-        -- to VARIANT, so these casts are assertions rather than repairs.
         line.value:line_number::number              as line_number,
         line.value:part_key::number                 as part_key,
         line.value:supplier_key::number             as supplier_key,
@@ -66,9 +50,6 @@ exploded as (
         line.value:ship_instruct::string            as ship_instructions,
         line.value:ship_mode::string                as ship_mode,
 
-        -- The payload carries no per-line comment. Declared so the column
-        -- exists with a known type rather than appearing later as a schema
-        -- change.
         cast(null as varchar)                       as line_comment,
 
         latest_delivery.record_content:_loaded_at::timestamp_ntz as _loaded_at,

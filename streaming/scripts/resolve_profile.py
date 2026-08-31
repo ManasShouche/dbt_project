@@ -1,10 +1,9 @@
-"""Resolve a named profile/target into connector config variables.
-
-Reads a dbt-shaped profiles.yml and prints `KEY=value` lines for the deploy
-script to consume. The key names (account, user, role, database, schema,
-private_key_path) are deliberately dbt's own, so pointing
-CONNECTOR_PROFILES_PATH at ~/.dbt/profiles.yml works without translation.
-"""
+\
+\
+\
+\
+\
+\
 
 import argparse
 import os
@@ -21,7 +20,6 @@ except ImportError:
 
 REQUIRED = ["account", "user", "role", "database", "schema", "private_key_path"]
 
-
 def find_profiles(explicit: str | None) -> pathlib.Path:
     candidates = []
     if explicit:
@@ -34,7 +32,6 @@ def find_profiles(explicit: str | None) -> pathlib.Path:
         if c.is_file():
             return c
     sys.exit("No profiles.yml found. Looked in:\n  " + "\n  ".join(str(c) for c in candidates))
-
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -64,8 +61,6 @@ def main() -> None:
 
     out = outputs[target]
 
-    # dbt profiles carry targets for other adapters too; refuse early rather
-    # than rendering a connector config that cannot possibly work.
     if "type" in out and out["type"] != "snowflake":
         sys.exit(f"Target '{target}' has type '{out['type']}'; the Snowflake sink needs snowflake.")
 
@@ -92,7 +87,6 @@ def main() -> None:
     }
     for k, v in emit.items():
         print(f"{k}={v}")
-
 
 if __name__ == "__main__":
     main()

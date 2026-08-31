@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Produce nested TPC-H order records into the `orders` topic via rpk.
-# Stdlib python only -- no extra dependencies.
-#
-#   ./scripts/produce_orders.sh 500
+
 set -euo pipefail
 
 COUNT="${1:-100}"
 TOPIC="${2:-orders}"
 
 docker compose exec -T redpanda rpk topic create "$TOPIC" -p 3 -r 1 2>/dev/null || true
-# One shared DLQ for every stream -- matches KAFKA_DLQ_TOPIC in .env.example.
+
 docker compose exec -T redpanda rpk topic create "${KAFKA_DLQ_TOPIC:-dlq.streams}" -p 1 -r 1 2>/dev/null || true
 
 python3 - "$COUNT" <<'PY' | docker compose exec -T redpanda rpk topic produce "$TOPIC" --format '%k %v\n'
@@ -31,11 +28,10 @@ for i in range(n):
     for ln in range(1, random.randint(1, 7) + 1):
         quantity  = random.randint(1, 50)
         ext_price = round(quantity * random.uniform(900, 2000), 2)
-        # Discount is a FRACTION, never a percentage -- see
-        # tests/assert_discount_within_bounds.sql.
+
         discount  = round(random.choice([0.0, 0.01, 0.02, 0.04, 0.05, 0.06, 0.08, 0.10]), 2)
         tax       = round(random.choice([0.0, 0.01, 0.02, 0.03, 0.05, 0.08]), 2)
-        # Nothing ships before it was ordered.
+
         ship_date = order_date + timedelta(days=random.randint(1, 120))
         line_items.append({
             "line_number":    ln,
@@ -54,8 +50,6 @@ for i in range(n):
             "ship_mode":      random.choice(modes),
         })
 
-    # TPC-H's o_totalprice definition. Computed rather than randomised so
-    # these orders reconcile under assert_order_total_matches_line_items.
     total_price = round(sum(
         round(li["extended_price"] * (1 - li["discount"]) * (1 + li["tax"]), 2)
         for li in line_items
@@ -77,8 +71,7 @@ for i in range(n):
             "market_segment": random.choice(segments),
         },
         "line_items": line_items,
-        # Arrival clock, set at produce time. Distinct from order_date, which
-        # is when the order was placed.
+
         "_loaded_at": datetime.now(timezone.utc).isoformat(),
     }))
 PY

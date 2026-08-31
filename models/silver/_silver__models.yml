@@ -21,8 +21,7 @@ models:
                 values: ['1-URGENT', '2-HIGH', '3-MEDIUM', '4-NOT SPECIFIED', '5-LOW']
 
   - name: silver_line_items
-    # Grain (order_key, line_number) is asserted by the singular test
-    # tests/assert_line_items_unique_per_order.sql.
+
     columns:
       - name: order_key
         data_tests:
@@ -44,9 +43,7 @@ models:
       - name: payment_key
         data_tests: [unique, not_null]
       - name: order_key
-        # The cross-stream integrity check: payments arrive on their own
-        # topic, in their own connector channel, and must still resolve to
-        # an order that arrived on a different one.
+
         data_tests:
           - not_null
           - relationships:
@@ -75,7 +72,7 @@ models:
                 to: ref('silver_nations')
                 field: nation_key
       - name: market_segment
-        # Warn: a new segment is worth knowing about, not worth blocking on.
+
         data_tests:
           - accepted_values:
               arguments:

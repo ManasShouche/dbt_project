@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# Generate a dedicated unencrypted PKCS#8 keypair for the connector and print
-# the ALTER USER statement to register it.
-#
-# Unencrypted on purpose: an encrypted key needs its passphrase stored in the
-# same connector config as the key itself, which buys nothing. Keeping the key
-# file out of git is the control that actually matters.
+
 set -euo pipefail
 
 KEY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/secrets"

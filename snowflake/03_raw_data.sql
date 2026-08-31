@@ -1,8 +1,3 @@
--- Batch dimension tables + the benchmark loader. ACCOUNTADMIN.
---
--- WARNING: the INSERTs are NOT idempotent. Running this against populated
--- tables doubles every row. Section 2's RESUME statements are safe alone.
-
 USE ROLE ACCOUNTADMIN;
 
 CREATE ICEBERG TABLE IF NOT EXISTS dbt_pipe.raw.customer_raw (
@@ -58,8 +53,6 @@ GRANT OWNERSHIP ON ICEBERG TABLE dbt_pipe.raw.customer_raw TO ROLE transformer C
 GRANT OWNERSHIP ON ICEBERG TABLE dbt_pipe.raw.nation_raw   TO ROLE transformer COPY CURRENT GRANTS;
 GRANT OWNERSHIP ON ICEBERG TABLE dbt_pipe.raw.region_raw   TO ROLE transformer COPY CURRENT GRANTS;
 
--- Section 2: resume dynamic tables. Required after any source is recreated;
--- Snowflake does not resume them automatically and dbt builds stay green.
 ALTER DYNAMIC TABLE dbt_pipe.dbt_manas_silver.silver_nations   RESUME;
 ALTER DYNAMIC TABLE dbt_pipe.dbt_manas_silver.silver_regions   RESUME;
 ALTER DYNAMIC TABLE dbt_pipe.dbt_manas_silver.silver_customers RESUME;
@@ -74,7 +67,6 @@ SHOW DYNAMIC TABLES IN DATABASE dbt_pipe;
 SELECT "name", "schema_name", "scheduling_state", "target_lag"
 FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
 
--- Section 3: optional benchmark loader. No dbt model reads its output.
 CREATE OR REPLACE PROCEDURE "LOAD_MONTH"("MONTH_START" DATE, "NATIVE_TOO" BOOLEAN DEFAULT TRUE)
 RETURNS VARCHAR
 LANGUAGE SQL

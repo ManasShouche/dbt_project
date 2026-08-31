@@ -3,18 +3,10 @@ dbt_packages/
 logs/
 .env
 
-# Anchored to the repo root on purpose: a bare `profiles.yml` matches at
-# every depth and silently excluded streaming/profiles.yml, which holds only
-# a PATH to a key and is meant to ship.
-#
-# dbt_projects_profiles.yml is deliberately NOT ignored -- dbt Projects on
-# Snowflake reads the profile from inside the project folder, so it has to be
-# committed. It carries no credentials.
 /profiles.yml
 
 streaming/secrets/
 .user.yml
 
-# Counts toward the 20,000-file limit on a deployed dbt project object.
 __pycache__/
 *.pyc

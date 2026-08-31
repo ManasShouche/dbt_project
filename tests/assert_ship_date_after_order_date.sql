@@ -1,8 +1,3 @@
--- Nothing ships before it was ordered.
---
--- Not expressible as a generic test: a relationship between two columns on
--- the same row, and a statement about the business rather than the schema.
-
 select
     line_items.order_key,
     line_items.line_number,

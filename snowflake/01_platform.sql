@@ -1,7 +1,3 @@
--- Platform setup. Run once, as ACCOUNTADMIN. Idempotent.
---     snow sql -c tpch -f snowflake/01_platform.sql
--- Landing tables are NOT here -- see snowflake/landing/.
-
 USE ROLE ACCOUNTADMIN;
 
 CREATE DATABASE IF NOT EXISTS dbt_pipe;
@@ -55,7 +51,6 @@ GRANT SELECT ON FUTURE TABLES         IN SCHEMA dbt_pipe.raw TO ROLE transformer
 GRANT SELECT ON ALL    ICEBERG TABLES IN SCHEMA dbt_pipe.raw TO ROLE transformer;
 GRANT SELECT ON FUTURE ICEBERG TABLES IN SCHEMA dbt_pipe.raw TO ROLE transformer;
 
--- Future grants must exist BEFORE any landing table is created.
 GRANT USAGE ON SCHEMA dbt_pipe.raw_streams TO ROLE kafka_ingest;
 GRANT USAGE ON SCHEMA dbt_pipe.raw_streams TO ROLE transformer;
 GRANT INSERT ON FUTURE ICEBERG TABLES IN SCHEMA dbt_pipe.raw_streams TO ROLE kafka_ingest;

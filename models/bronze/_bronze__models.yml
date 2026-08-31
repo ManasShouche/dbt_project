@@ -11,11 +11,6 @@ models:
         description: The order payload as a typed OBJECT, exactly as it landed.
         data_tests: [not_null]
 
-      # Warn, not error: 500 rows landed before RECORD_METADATA existed on the
-      # landing table and carry NULLs permanently. To clear them:
-      #     TRUNCATE TABLE dbt_pipe.raw.orders_stream;
-      #     ./streaming/scripts/produce_orders.sh 500
-      # then restore error severity on the three columns below.
       - name: kafka_offset
         description: Kafka offset as a NUMBER, so the dedupe can order on it.
         data_tests:

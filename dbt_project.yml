@@ -12,22 +12,11 @@ clean-targets:
   - "dbt_packages"
 
 vars:
-  # Paired with `{{ target.database }}` in models/_sources.yml so the project
-  # stays portable across accounts.
+
   raw_schema: raw
 
-  # Streaming landing tables live apart from the batch dimensions so the
-  # connector's future grants can be broad without giving it write access to
-  # CUSTOMER_RAW / NATION_RAW / REGION_RAW. One connector serves every topic
-  # and has a single snowflake.schema.name, so all topics land here.
   raw_streams_schema: raw_streams
 
-  # Lookback window for every incremental model, in hours. Models filter
-  # `watermark > (max(watermark) - this)`, never a bare `>`: a bare high-water
-  # mark assumes perfect ordering and silently drops out-of-order arrivals,
-  # which are normal (partition retry, connector restart, rebalance). The
-  # overlap costs a re-read that MERGE turns into a no-op. Widen it if the
-  # connector is ever down longer than this.
   late_arrival_hours: 6
 
 models:
@@ -36,44 +25,21 @@ models:
       relation: true
       columns: true
 
-    # Bronze: the landing payload, still nested. One payload column --
-    # expansion into relational shape is silver's job. bronze_orders
-    # overrides to incremental/append because bronze accumulates deliveries;
-    # the view default is for a thin projection over a table the connector
-    # already keeps current.
     bronze:
       +materialized: view
       +schema: bronze
 
-    # Silver: expands the nested payload, renames and casts. No joins, no
-    # business logic.
-    #
-    # Dynamic tables rather than views, because streaming ingest lands rows
-    # continuously: a view recomputes on every query and a plain table is
-    # stale until someone runs dbt. silver_orders and silver_line_items
-    # override to incremental -- both dedupe with a window function, which
-    # Snowflake cannot maintain as a delta (refresh_mode = FULL).
-    #
-    # target_lag is inherited by new silver dynamic tables; the three
-    # existing ones override it to DOWNSTREAM to follow dim_customers.
     silver:
       +materialized: dynamic_table
       +target_lag: '1 hour'
-      # Required for dynamic tables -- dbt does not fall back to the
-      # profile's warehouse. Read from the target for the same reason
-      # models/_sources.yml reads target.database.
+
       +snowflake_warehouse: "{{ target.warehouse }}"
       +schema: silver
 
-    # Gold: the dimensional model. Joins and business logic live here and
-    # nowhere upstream.
     gold:
       +materialized: table
       +schema: gold
 
-    # Audit: operational views over the pipeline itself. Views because they
-    # answer a question about "right now" -- materialising them would create
-    # monitoring that can itself be stale.
     audit:
       +materialized: view
       +schema: audit

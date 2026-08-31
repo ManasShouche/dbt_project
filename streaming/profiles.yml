@@ -1,16 +1,3 @@
-# Connection profiles for the Snowflake Kafka connector.
-#
-# Deliberately the same shape as dbt's profiles.yml. Kafka Connect has no
-# native notion of profiles -- a connector config is a flat JSON map POSTed to
-# the REST API -- so this is resolved at deploy time by
-# scripts/resolve_profile.py and rendered into that map.
-#
-# Connection details ONLY. Topics and task counts stay in
-# connectors/snowflake-sink.json.template.
-#
-# Holds no key material, only a PATH to a key, which is why it is safe to
-# commit. Point CONNECTOR_PROFILES_PATH elsewhere to keep it out of the repo.
-
 tpch_stream:
   target: dev
   outputs:
@@ -20,18 +7,11 @@ tpch_stream:
       user:             kafka_ingest_svc
       role:             kafka_ingest
       database:         DBT_PIPE
-      # Every topic on this connector lands in this ONE schema -- there is a
-      # single snowflake.schema.name however many topics it serves. That is
-      # why landing tables live in RAW_STREAMS: the future grants there make
-      # each new one writable on creation, while the connector still cannot
-      # touch the batch dimensions in RAW.
+
       schema:           RAW_STREAMS
       warehouse:        wh_transform
       private_key_path: ./secrets/kafka_ingest_key.p8
 
-    # Same account because there is only one. In a real setup this is where a
-    # separate prod account/role/schema goes, and switching is `--target prod`
-    # rather than editing any connector config.
     prod:
       account:          EPOYKUR-NM07280
       user:             kafka_ingest_svc

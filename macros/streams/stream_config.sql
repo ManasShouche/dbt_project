@@ -1,19 +1,3 @@
-{#
-    Readers for the two config tables. Everything else in the framework goes
-    through these, so there is one place that knows how the config is shaped.
-
-    Both run `run_query` at COMPILE time, so every caller must also declare
-    `-- depends_on: {{ ref('stream_config') }}`. Without it dbt does not know
-    the seed has to be loaded first, and the query reads a table that is not
-    there yet.
-
-    The `execute` guard is required too: dbt evaluates macros during parsing,
-    before any connection is used, and `run_query` returns None then.
-#}
-
-
-{#- agate table -> list of dicts. Snowflake returns column names uppercased;
-    the rest of the framework reads them lowercase, so normalise once here. -#}
 {% macro _rows_as_dicts(results) %}
     {%- set out = [] -%}
     {%- set names = results.column_names | map('lower') | list -%}
@@ -27,9 +11,6 @@
     {{ return(out) }}
 {% endmacro %}
 
-
-{#- One stream's row from STREAM_CONFIG. Errors loudly if missing or
-    disabled: a silently empty config compiles to nothing and looks fine. -#}
 {% macro get_stream_config(stream_name) %}
     {%- if not execute -%}{{ return({}) }}{%- endif -%}
 
@@ -52,9 +33,6 @@
     {{ return(rows[0]) }}
 {% endmacro %}
 
-
-{#- One stream's field mappings, in ordinal order. That order is the column
-    order of the model it builds, so it is data, not cosmetics. -#}
 {% macro get_stream_columns(stream_name) %}
     {%- if not execute -%}{{ return([]) }}{%- endif -%}
 
@@ -77,8 +55,6 @@
     {{ return(rows) }}
 {% endmacro %}
 
-
-{#- Every enabled stream. Used by the audit model to survey them all. -#}
 {% macro get_enabled_streams() %}
     {%- if not execute -%}{{ return([]) }}{%- endif -%}
 

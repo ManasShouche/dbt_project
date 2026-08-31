@@ -1,27 +1,9 @@
-# Connection profile for dbt Projects on Snowflake.
-#
-# Snowflake reads the profile from INSIDE the project folder -- there is no
-# ~/.dbt to fall back on and `--profiles-dir` is not supported there. When
-# both this file and profiles.yml are present Snowflake uses this one, which
-# is the split we want: profiles.yml is the local developer's file and stays
-# gitignored, this one ships.
-#
-# The profile name must match `profile:` in dbt_project.yml.
-#
-# No credentials, by design: the project runs inside Snowflake under the
-# invoking session, so account and user come from that context and whatever
-# is written here is ignored.
-
 tpch_pipeline:
   target: dev
   outputs:
     dev:
       type: snowflake
 
-      # Required by dbt's schema validation, ignored at run time. NOT empty
-      # strings -- dbt-snowflake's validator rejects an empty `user` with
-      # "Invalid profile: 'user' is a required property". Arbitrary but
-      # non-empty clears it.
       account: unused-supplied-by-snowflake-session
       user: unused-supplied-by-snowflake-session
 
@@ -29,10 +11,6 @@ tpch_pipeline:
       database: dbt_pipe
       schema: dbt_manas
 
-      # Load-bearing: dbt_project.yml passes
-      # `+snowflake_warehouse: "{{ target.warehouse }}"` to the silver dynamic
-      # tables and dbt does not fall back to a session warehouse for those.
-      # Drop this key and every dynamic table fails to create.
       warehouse: wh_transform
 
       threads: 4

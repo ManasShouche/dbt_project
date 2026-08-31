@@ -25,6 +25,6 @@ models:
         data_tests: [not_null]
       - name: net_amount
         data_tests: [not_null]
-      # Null when the priority has no seeded threshold -- worth catching.
+
       - name: is_within_ship_sla
         data_tests: [not_null]
