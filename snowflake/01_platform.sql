@@ -26,6 +26,8 @@ CREATE ROLE IF NOT EXISTS kafka_ingest
 GRANT ROLE transformer  TO ROLE sysadmin;
 GRANT ROLE kafka_ingest TO ROLE sysadmin;
 
+GRANT EXECUTE TASK ON ACCOUNT TO ROLE accountadmin;
+
 GRANT USAGE, CREATE SCHEMA ON DATABASE dbt_pipe TO ROLE transformer;
 GRANT USAGE                ON DATABASE dbt_pipe TO ROLE kafka_ingest;
 GRANT USAGE ON WAREHOUSE wh_transform TO ROLE transformer;
