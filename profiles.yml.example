@@ -1,19 +1,3 @@
-# Copy to ~/.dbt/profiles.yml for LOCAL dbt runs.
-#
-#     cp profiles.yml.example ~/.dbt/profiles.yml
-#
-# This is the local developer's file and stays gitignored. Deploying to dbt
-# Projects on Snowflake uses dbt_projects_profiles.yml instead, which carries
-# no credentials because the project runs under the invoking session.
-#
-# Key-pair auth, not password: on this account `externalbrowser` fails
-# (390190, no SAML identity provider) and passwords go stale (390100).
-# Register the public half with
-#     ALTER USER <user> SET RSA_PUBLIC_KEY = '<key body>';
-#
-# Models read `target.database` rather than hardcoding one, so the same
-# checkout runs against any target below without edits.
-
 tpch_pipeline:
   target: dev
   outputs:
@@ -29,8 +13,6 @@ tpch_pipeline:
       threads: 4
       client_session_keep_alive: false
 
-    # A second account goes here; switching is `--target prod` rather than an
-    # edit to any model. Same shape as streaming/profiles.yml.
     prod:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT_PROD') }}"

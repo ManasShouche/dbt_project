@@ -23,6 +23,9 @@ CREATE ROLE IF NOT EXISTS transformer
 CREATE ROLE IF NOT EXISTS kafka_ingest
     COMMENT = 'Write-only ingest role for the Snowflake Kafka connector.';
 
+GRANT ROLE transformer  TO ROLE sysadmin;
+GRANT ROLE kafka_ingest TO ROLE sysadmin;
+
 GRANT USAGE, CREATE SCHEMA ON DATABASE dbt_pipe TO ROLE transformer;
 GRANT USAGE                ON DATABASE dbt_pipe TO ROLE kafka_ingest;
 GRANT USAGE ON WAREHOUSE wh_transform TO ROLE transformer;

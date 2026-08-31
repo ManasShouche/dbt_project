@@ -29,10 +29,10 @@ select
     '{{ s["raw_table"] }}'                          as raw_table,
     count(*)                                        as row_count,
     max({{ s["watermark_field"] }})                 as last_event_at,
-    datediff('minute', max({{ s["watermark_field"] }}), current_timestamp())
+    datediff('minute', max({{ s["watermark_field"] }}), sysdate())
                                                     as minutes_behind,
     {{ s["sla_minutes"] }}                          as sla_minutes,
-    datediff('minute', max({{ s["watermark_field"] }}), current_timestamp())
+    datediff('minute', max({{ s["watermark_field"] }}), sysdate())
         <= {{ s["sla_minutes"] }}                   as is_within_sla
 
 from {{ ref(s["target_model"]) }}
