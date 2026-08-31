@@ -1,0 +1,82 @@
+version: 2
+
+seeds:
+  - name: stream_config
+    description: >
+      One row per stream: which bronze model to read, what to deduplicate on,
+      and which target to write into. Adding a stream is a row here, a row set
+      in stream_column_config, and a three-line model file.
+    config:
+      column_types:
+        stream_name:      varchar(60)
+        source_topic:     varchar(120)
+        raw_table:        varchar(120)
+        bronze_model:     varchar(120)
+        target_model:     varchar(120)
+        payload_column:   varchar(60)
+        primary_key:      varchar(120)
+        watermark_field:  varchar(60)
+        event_time_field: varchar(60)
+        load_type:        varchar(30)
+        sla_minutes:      integer
+        enabled:          boolean
+    columns:
+      - name: stream_name
+        description: Stable key, referenced by stream_column_config and every model call.
+        data_tests: [unique, not_null]
+      - name: bronze_model
+        description: dbt model the silver stream reads. Not the landing table.
+        data_tests: [not_null]
+      - name: target_model
+        description: dbt model this stream builds. One stream, one silver model.
+        data_tests: [unique, not_null]
+      - name: primary_key
+        description: Dedupe key. One row per value survives per batch.
+        data_tests: [not_null]
+      - name: watermark_field
+        description: >
+          Arrival clock the incremental filter reads. Must be
+          platform-assigned (ingested_at) -- a producer clock moves backwards
+          on replay and silently drops rows.
+        data_tests: [not_null]
+      - name: load_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['incremental', 'append']
+      - name: sla_minutes
+        description: Freshness budget. stream_audit flags streams past it.
+        data_tests: [not_null]
+      - name: enabled
+        description: >
+          False keeps a stream configured but unbuilt. The two example rows
+          ship disabled because their landing tables and models do not exist.
+        data_tests: [not_null]
+
+  - name: stream_column_config
+    description: >
+      Field mappings, one row per column of the target model. Ordinal is the
+      column order of the built table, so it is data rather than cosmetics.
+    config:
+      column_types:
+        stream_name:  varchar(60)
+        source_field: varchar(200)
+        target_field: varchar(120)
+        data_type:    varchar(60)
+        ordinal:      integer
+    columns:
+      - name: stream_name
+        description: Joins to stream_config. Not unique -- one row per field.
+        data_tests: [not_null]
+      - name: source_field
+        description: >
+          Path inside the payload object. Dots traverse nesting, so
+          `customer.customer_key` reads one level down.
+        data_tests: [not_null]
+      - name: target_field
+        data_tests: [not_null]
+      - name: data_type
+        description: Snowflake type for the cast. Money must carry scale.
+        data_tests: [not_null]
+      - name: ordinal
+        data_tests: [not_null]

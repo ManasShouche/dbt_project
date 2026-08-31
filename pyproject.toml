@@ -1,0 +1,12 @@
+[project]
+name = "tpch-clean"
+version = "0.1.0"
+description = "TPC-H streaming pipeline: Redpanda -> Snowpipe Streaming -> Iceberg raw -> dbt medallion"
+readme = "README.md"
+authors = [
+    { name = "ManasShouche", email = "manasshouche@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "dbt-snowflake>=1.12.0",
+]

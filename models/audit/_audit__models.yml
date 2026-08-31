@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: stream_audit
+    description: >
+      Freshness and volume per enabled stream, answered at query time. Run
+      failures live elsewhere -- dbt's run_results and Snowflake's
+      TASK_HISTORY already own those.
+    columns:
+      - name: stream_name
+        data_tests: [unique, not_null]
+      - name: row_count
+        data_tests: [not_null]
+      - name: is_within_sla
+        description: >
+          Warn, not error: a stream falling behind should not fail the build
+          that would have caught it up.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn

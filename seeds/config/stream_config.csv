@@ -1,0 +1,4 @@
+stream_name,source_topic,raw_table,bronze_model,target_model,payload_column,primary_key,watermark_field,event_time_field,load_type,sla_minutes,enabled
+orders,orders,orders_stream,bronze_orders,silver_orders,record_content,order_key,ingested_at,_loaded_at,incremental,60,true
+payments,payments,payments_stream,bronze_payments,silver_payments,record_content,payment_key,ingested_at,payment_ts,incremental,15,true
+users,users,users_stream,bronze_users,silver_users,record_content,user_key,ingested_at,_loaded_at,incremental,60,false

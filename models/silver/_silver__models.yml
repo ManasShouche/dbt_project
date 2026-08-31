@@ -1,0 +1,103 @@
+version: 2
+
+models:
+  - name: silver_orders
+    columns:
+      - name: order_key
+        data_tests: [unique, not_null]
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_customers')
+                field: customer_key
+      - name: order_date
+        data_tests: [not_null]
+      - name: order_priority
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['1-URGENT', '2-HIGH', '3-MEDIUM', '4-NOT SPECIFIED', '5-LOW']
+
+  - name: silver_line_items
+    # Grain (order_key, line_number) is asserted by the singular test
+    # tests/assert_line_items_unique_per_order.sql.
+    columns:
+      - name: order_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_key
+      - name: extended_price
+        data_tests: [not_null]
+      - name: discount
+        data_tests: [not_null]
+
+  - name: silver_payments
+    description: >
+      Built entirely by build_silver_stream from seeds/config/ -- no
+      transformation SQL of its own.
+    columns:
+      - name: payment_key
+        data_tests: [unique, not_null]
+      - name: order_key
+        # The cross-stream integrity check: payments arrive on their own
+        # topic, in their own connector channel, and must still resolve to
+        # an order that arrived on a different one.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_key
+      - name: amount
+        data_tests: [not_null]
+      - name: payment_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['CAPTURED', 'PENDING', 'REFUNDED', 'FAILED']
+              config:
+                severity: warn
+
+  - name: silver_customers
+    columns:
+      - name: customer_key
+        data_tests: [unique, not_null]
+      - name: nation_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_nations')
+                field: nation_key
+      - name: market_segment
+        # Warn: a new segment is worth knowing about, not worth blocking on.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['BUILDING', 'AUTOMOBILE', 'MACHINERY', 'HOUSEHOLD', 'FURNITURE']
+              config:
+                severity: warn
+
+  - name: silver_nations
+    columns:
+      - name: nation_key
+        data_tests: [unique, not_null]
+      - name: region_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_regions')
+                field: region_key
+
+  - name: silver_regions
+    columns:
+      - name: region_key
+        data_tests: [unique, not_null]
+      - name: region_name
+        data_tests: [not_null]

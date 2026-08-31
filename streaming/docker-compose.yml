@@ -1,0 +1,100 @@
+# Redpanda (Kafka API) + Kafka Connect running the Snowflake sink.
+#
+# Redpanda is a single binary with no ZooKeeper/KRaft controller to babysit.
+# The wire protocol is the same, so the connector cannot tell the difference.
+
+services:
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=1G
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      # Two listeners: `internal` is what Connect and Console use inside the
+      # compose network, `external` is what rpk/your laptop use from the host.
+      # Advertising only one address is the most common reason a local Kafka
+      # "connects" but never delivers.
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr=redpanda:33145
+      - --advertise-rpc-addr=redpanda:33145
+      - --mode=dev-container
+    ports:
+      - "19092:19092"   # broker, from the host
+      - "18081:18081"   # schema registry, from the host
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  console:
+    image: redpandadata/console:latest
+    container_name: redpanda-console
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+      CONNECT_ENABLED: "true"
+      CONNECT_CLUSTERS_NAME: snowpipe
+      CONNECT_CLUSTERS_URL: http://connect:8083
+
+  connect:
+    build:
+      context: ./connect
+    container_name: connect
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: redpanda:9092
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_REST_PORT: "8083"
+      CONNECT_GROUP_ID: snowpipe-connect
+
+      # Connect stores its own state in Kafka topics. RF=1 because this is a
+      # single broker; anything higher and the worker refuses to start.
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect_configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect_offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _connect_status
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
+
+      # Resolves ${file:/path:key} references at task startup, so the private
+      # key never enters the connector config and therefore never lands in
+      # the _connect_configs topic or comes back out of the REST API.
+      CONNECT_CONFIG_PROVIDERS: file
+      CONNECT_CONFIG_PROVIDERS_FILE_CLASS: org.apache.kafka.common.config.provider.FileConfigProvider
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+      CONNECT_LOG4J_LOGGERS: com.snowflake.kafka.connector=INFO
+    volumes:
+      # Read-only: the worker resolves the key from here, nothing writes back.
+      - ./secrets:/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  redpanda-data:

@@ -1,0 +1,35 @@
+{
+  "name": "snowpipe-orders",
+  "config": {
+    "connector.class": "com.snowflake.kafka.connector.SnowflakeStreamingSinkConnector",
+
+    "topics": "${KAFKA_TOPICS}",
+    "snowflake.topic2table.map": "${KAFKA_TOPIC_TABLE_MAP}",
+
+    "tasks.max": "2",
+
+    "snowflake.url.name":      "${SNOWFLAKE_ACCOUNT}.snowflakecomputing.com:443",
+    "snowflake.user.name":     "${SNOWFLAKE_USER}",
+    "snowflake.role.name":     "${SNOWFLAKE_ROLE}",
+    "snowflake.database.name": "${SNOWFLAKE_DATABASE}",
+    "snowflake.schema.name":   "${SNOWFLAKE_SCHEMA}",
+
+    "snowflake.authenticator": "snowflake_jwt",
+    "snowflake.private.key":   "${file:/secrets/snowflake.properties:snowflake_private_key}",
+
+    "snowflake.enable.schematization": "false",
+
+    "snowflake.streaming.validate.compatibility.with.classic": "false",
+
+    "snowflake.autocreate.table.type": "iceberg",
+
+    "key.converter":   "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+
+    "errors.tolerance":   "all",
+    "errors.log.enable":  "true",
+    "errors.deadletterqueue.topic.name": "${KAFKA_DLQ_TOPIC}",
+    "errors.deadletterqueue.topic.replication.factor": "1"
+  }
+}

@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: bronze_orders
+    description: >
+      Append-only record of streamed order deliveries, payload still nested.
+      Duplicates from at-least-once delivery are kept here on purpose and
+      collapsed in silver.
+    columns:
+      - name: record_content
+        description: The order payload as a typed OBJECT, exactly as it landed.
+        data_tests: [not_null]
+
+      # Warn, not error: 500 rows landed before RECORD_METADATA existed on the
+      # landing table and carry NULLs permanently. To clear them:
+      #     TRUNCATE TABLE dbt_pipe.raw.orders_stream;
+      #     ./streaming/scripts/produce_orders.sh 500
+      # then restore error severity on the three columns below.
+      - name: kafka_offset
+        description: Kafka offset as a NUMBER, so the dedupe can order on it.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: kafka_partition
+        description: Kafka partition the record arrived on.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: produced_at
+        description: >
+          Kafka CreateTime. Not a watermark -- the producer sets it, so it
+          moves backwards on replay.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: ingested_at
+        description: >
+          The watermark. SnowflakeConnectorPushTime, so it always increases
+          on re-delivery. Every incremental model filters on this column.
+        data_tests: [not_null]
+
+  - name: bronze_payments
+    description: >
+      Append-only record of streamed payment deliveries, payload still
+      nested. Same shape as bronze_orders; duplicates are collapsed in
+      silver.
+    columns:
+      - name: record_content
+        description: The payment payload as a typed OBJECT, exactly as it landed.
+        data_tests: [not_null]
+      - name: kafka_offset
+        description: Kafka offset as a NUMBER, so the dedupe can order on it.
+        data_tests: [not_null]
+      - name: kafka_partition
+        data_tests: [not_null]
+      - name: ingested_at
+        description: >
+          The watermark. SnowflakeConnectorPushTime, so it always increases
+          on re-delivery.
+        data_tests: [not_null]

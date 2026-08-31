@@ -1,0 +1,6 @@
+order_priority,max_ship_days,max_receipt_days
+1-URGENT,3,10
+2-HIGH,5,14
+3-MEDIUM,10,21
+4-NOT SPECIFIED,15,30
+5-LOW,20,45

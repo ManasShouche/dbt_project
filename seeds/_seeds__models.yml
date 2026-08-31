@@ -1,0 +1,14 @@
+version: 2
+
+seeds:
+  - name: sla_thresholds
+    config:
+      column_types:
+        order_priority: varchar(15)
+        max_ship_days: integer
+        max_receipt_days: integer
+    columns:
+      - name: order_priority
+        data_tests: [unique, not_null]
+      - name: max_ship_days
+        data_tests: [not_null]

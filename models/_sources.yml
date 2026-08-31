@@ -1,0 +1,94 @@
+version: 2
+
+sources:
+  # Streamed landing tables. One connector serves every topic and has a
+  # single snowflake.schema.name, so all topics land in this one schema --
+  # which is why it is separate from RAW, where the batch dimensions live.
+  - name: raw_streams
+    database: "{{ target.database }}"
+    schema: "{{ var('raw_streams_schema') }}"
+
+    config:
+      freshness:
+        warn_after: {count: 24, period: hour}
+        error_after: {count: 72, period: hour}
+
+    tables:
+      - name: orders_stream
+        description: >
+          Landing table for streamed order events. Iceberg v3;
+          RECORD_CONTENT is a structured OBJECT rather than VARIANT, which
+          the connector rejects outright for Iceberg targets.
+        # The arrival clock is inside the payload; there is no _loaded_at column.
+        config:
+          loaded_at_field: "record_content:_loaded_at::timestamp_ntz"
+        columns:
+          - name: record_content
+            description: >
+              Order payload as a typed OBJECT, nested customer and
+              line_items intact.
+            data_tests: [not_null]
+          - name: record_metadata
+            description: >
+              topic / partition / offset / CreateTime from the connector.
+              Must be declared in the table DDL: writing into a pre-created
+              Iceberg table, connector v4 populates only the columns that
+              already exist and raises no error when this one is missing.
+            # Warn rather than error. At error severity this single test skips
+            # the whole streaming branch. 500 rows predate the column.
+            data_tests:
+              - not_null:
+                  config:
+                    severity: warn
+
+      - name: payments_stream
+        description: >
+          Landing table for streamed payment events. Flat payload -- one
+          payment, one row -- which is why silver_payments needs no
+          hand-written SQL at all.
+        config:
+          loaded_at_field: "record_content:_loaded_at::timestamp_ntz"
+        columns:
+          - name: record_content
+            data_tests: [not_null]
+          - name: record_metadata
+            data_tests:
+              - not_null:
+                  config:
+                    severity: warn
+
+  # Batch dimensions. The connector has no access to this schema at all.
+  - name: raw
+    database: "{{ target.database }}"
+    schema: "{{ var('raw_schema') }}"
+
+    config:
+      freshness:
+        warn_after: {count: 24, period: hour}
+        error_after: {count: 72, period: hour}
+
+    tables:
+      # orders_raw and lineitem_raw are deliberately absent: still loaded by
+      # RAW.LOAD_MONTH for the Iceberg-vs-native benchmark, but no model reads
+      # them, and declaring unconsumed sources puts them in the docs and in
+      # `dbt source freshness` as if they were live.
+      - name: customer_raw
+        config:
+          loaded_at_field: _loaded_at
+        columns:
+          - name: c_custkey
+            data_tests: [unique, not_null]
+
+      - name: nation_raw
+        config:
+          loaded_at_field: _loaded_at
+        columns:
+          - name: n_nationkey
+            data_tests: [unique, not_null]
+
+      - name: region_raw
+        config:
+          loaded_at_field: _loaded_at
+        columns:
+          - name: r_regionkey
+            data_tests: [unique, not_null]
