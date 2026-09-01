@@ -13,13 +13,11 @@ set -a; source snowflake/.env; set +a
 CONN="${SNOWFLAKE_CONNECTION:-tpch}"
 PROJECT="dbt_pipe.control.tpch_clean"
 DBT_VERSION="1.11.11"
-RESET=0
 VERIFY=0
 for arg in "$@"; do
   case "$arg" in
-    --reset)  RESET=1 ;;
     --verify) VERIFY=1 ;;
-    *) echo "usage: snowflake/deploy.sh [--reset] [--verify]" >&2; exit 2 ;;
+    *) echo "usage: snowflake/deploy.sh [--verify]" >&2; exit 2 ;;
   esac
 done
 
@@ -45,12 +43,8 @@ run_with_retry() {
   done
 }
 
-if (( RESET )); then
-  run snowflake/99_reset.sql
-fi
-
 run snowflake/01_platform.sql
-for f in snowflake/02_landing/[!_]*.sql; do run "$f"; done
+run snowflake/02_landing.sql
 run_with_retry snowflake/03_dimensions.sql
 
 STAGE="$(mktemp -d)"

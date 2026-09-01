@@ -3,6 +3,7 @@ target/
 dbt_packages/
 logs/
 .env
+uv.lock
 
 /profiles.yml
 
